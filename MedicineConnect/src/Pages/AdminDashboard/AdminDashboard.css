@@ -1,0 +1,18 @@
+/* Override Ant Design font settings */
+.ant-layout,
+.ant-layout-header,
+.ant-layout-sider,
+.ant-layout-content {
+  font-family: "Poppins", sans-serif !important;
+}
+
+/* Specific styles for dashboard elements */
+.dashboard-text {
+  font-family: "Poppins", sans-serif !important;
+}
+
+.hover-state:hover {
+  background-color: #badbe8;
+  border-radius: 10px;
+  width: 100%;
+}
