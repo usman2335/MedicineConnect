@@ -58,7 +58,6 @@ const AdminDashboard = () => {
   return (
     <Layout style={layoutStyle}>
       <Sider width="15%" style={siderStyle}>
-        <h1 className="text-3xl font-bold p-5 text-gray-900">Logo</h1>
         <Divider />
         <div className="flex flex-col gap-1 leading-15 mt-8 text-sm font-medium">
           <div
@@ -98,12 +97,12 @@ const AdminDashboard = () => {
       </Sider>
 
       <Layout>
-        <Header style={headerStyle}>
+        {/* <Header style={headerStyle}>
           <div className="flex items-center justify-end gap-1">
             <Avatar icon={<UserOutlined />} />
             <span>Admin Placeholder</span>
           </div>
-        </Header>
+        </Header> */}
 
         <Content style={contentStyle}>
           {view === "dashboard" ? (
