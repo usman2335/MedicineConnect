@@ -97,10 +97,10 @@ const Navbar: React.FC = () => {
             <Link to="/" className={linkClass}>
               About Us
             </Link>
-            <Link to="/" className={linkClass}>
+            <Link to="/login" className={linkClass}>
               Login
             </Link>
-            <Link to="/" className={linkClass}>
+            <Link to="/signup" className={linkClass}>
               Register
             </Link>
           </>
