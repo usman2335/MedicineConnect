@@ -1,10 +1,15 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Link as ScrollLink } from "react-scroll";
+import { motion, AnimatePresence } from "framer-motion";
 
 const Navbar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [patientName, setPatientName] = useState<string | null>(null);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -19,11 +24,26 @@ const Navbar: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const name = localStorage.getItem("patientName");
+    setIsLoggedIn(!!token);
+    setPatientName(name);
+  }, [location]);
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("patientName");
+    setIsLoggedIn(false);
+    setPatientName(null);
+    navigate("/");
+  };
+
   const scrollLinkClass = "cursor-pointer hover:text-blue-600";
   const linkClass = "hover:text-blue-600";
 
   return (
-    <nav className="bg-white shadow-md px-6 py-4 flex justify-between items-center relative">
+    <nav className="bg-white shadow-md px-6 py-4 flex justify-between items-center relative z-50">
       {/* Logo */}
       <div
         onClick={handleHomeClick}
@@ -32,8 +52,8 @@ const Navbar: React.FC = () => {
         Medicine Connect
       </div>
 
-      {/* Desktop Navigation Links */}
-      <div className="hidden md:flex space-x-6 text-gray-700 font-medium">
+      {/* Desktop Navigation */}
+      <div className="hidden md:flex space-x-6 text-gray-700 font-medium items-center relative">
         <span onClick={handleHomeClick} className={scrollLinkClass}>
           Home
         </span>
@@ -67,24 +87,6 @@ const Navbar: React.FC = () => {
             >
               About Us
             </ScrollLink>
-            <ScrollLink
-              to="login"
-              smooth
-              duration={500}
-              offset={-70}
-              className={scrollLinkClass}
-            >
-              Login
-            </ScrollLink>
-            <ScrollLink
-              to="register"
-              smooth
-              duration={500}
-              offset={-70}
-              className={scrollLinkClass}
-            >
-              Register
-            </ScrollLink>
           </>
         ) : (
           <>
@@ -97,21 +99,57 @@ const Navbar: React.FC = () => {
             <Link to="/" className={linkClass}>
               About Us
             </Link>
-            <Link to="/login" className={linkClass}>
-              Login
-            </Link>
-            <Link to="/signup" className={linkClass}>
-              Register
-            </Link>
           </>
         )}
 
-        <Link to="/dashboard" className={linkClass}>
-          Dashboard
-        </Link>
+        {/* Authentication Buttons */}
+        {!isLoggedIn ? (
+          <>
+            <Link
+              to="/login"
+              className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition duration-300"
+            >
+              Login
+            </Link>
+            <Link
+              to="/signup"
+              className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition duration-300"
+            >
+              Register
+            </Link>
+          </>
+        ) : (
+          <div className="relative">
+            <button
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition duration-300"
+            >
+              {patientName?.split(" ")[0]}
+            </button>
+
+            <AnimatePresence>
+              {isDropdownOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                  className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg overflow-hidden"
+                >
+                  <button
+                    onClick={handleLogout}
+                    className="w-full text-left px-4 py-3 text-gray-700 hover:bg-gray-100 transition"
+                  >
+                    Logout
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
       </div>
 
-      {/* Mobile Hamburger Icon */}
+      {/* Mobile Hamburger */}
       <div className="md:hidden">
         <button onClick={toggleMenu} aria-label="Toggle menu">
           {isOpen ? <X size={24} /> : <Menu size={24} />}
@@ -120,9 +158,12 @@ const Navbar: React.FC = () => {
 
       {/* Mobile Menu */}
       {isOpen && (
-        <div className="absolute top-16 left-0 w-full bg-white shadow-md flex flex-col items-center md:hidden z-50 text-gray-700 font-medium">
+        <div className="absolute top-16 left-0 w-full bg-white shadow-md flex flex-col items-center md:hidden z-40 text-gray-700 font-medium space-y-2 pb-4">
           <span
-            onClick={handleHomeClick}
+            onClick={() => {
+              toggleMenu();
+              handleHomeClick();
+            }}
             className="py-2 hover:text-blue-600 cursor-pointer"
           >
             Home
@@ -135,6 +176,7 @@ const Navbar: React.FC = () => {
                 smooth
                 duration={500}
                 offset={-70}
+                onClick={toggleMenu}
                 className="py-2 cursor-pointer hover:text-blue-600"
               >
                 Services
@@ -144,6 +186,7 @@ const Navbar: React.FC = () => {
                 smooth
                 duration={500}
                 offset={-70}
+                onClick={toggleMenu}
                 className="py-2 cursor-pointer hover:text-blue-600"
               >
                 Doctors
@@ -153,52 +196,66 @@ const Navbar: React.FC = () => {
                 smooth
                 duration={500}
                 offset={-70}
+                onClick={toggleMenu}
                 className="py-2 cursor-pointer hover:text-blue-600"
               >
                 About Us
-              </ScrollLink>
-              <ScrollLink
-                to="login"
-                smooth
-                duration={500}
-                offset={-70}
-                className="py-2 cursor-pointer hover:text-blue-600"
-              >
-                Login
-              </ScrollLink>
-              <ScrollLink
-                to="register"
-                smooth
-                duration={500}
-                offset={-70}
-                className="py-2 cursor-pointer hover:text-blue-600"
-              >
-                Register
               </ScrollLink>
             </>
           ) : (
             <>
-              <Link to="/" className="py-2 hover:text-blue-600">
+              <Link
+                to="/"
+                onClick={toggleMenu}
+                className="py-2 hover:text-blue-600"
+              >
                 Services
               </Link>
-              <Link to="/" className="py-2 hover:text-blue-600">
+              <Link
+                to="/"
+                onClick={toggleMenu}
+                className="py-2 hover:text-blue-600"
+              >
                 Doctors
               </Link>
-              <Link to="/" className="py-2 hover:text-blue-600">
+              <Link
+                to="/"
+                onClick={toggleMenu}
+                className="py-2 hover:text-blue-600"
+              >
                 About Us
-              </Link>
-              <Link to="/" className="py-2 hover:text-blue-600">
-                Login
-              </Link>
-              <Link to="/" className="py-2 hover:text-blue-600">
-                Register
               </Link>
             </>
           )}
 
-          <Link to="/dashboard" className="py-2 hover:text-blue-600">
-            Dashboard
-          </Link>
+          {!isLoggedIn ? (
+            <>
+              <Link
+                to="/login"
+                onClick={toggleMenu}
+                className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition duration-300"
+              >
+                Login
+              </Link>
+              <Link
+                to="/signup"
+                onClick={toggleMenu}
+                className="bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-600 transition duration-300"
+              >
+                Register
+              </Link>
+            </>
+          ) : (
+            <button
+              onClick={() => {
+                handleLogout();
+                toggleMenu();
+              }}
+              className="bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600 transition duration-300"
+            >
+              Logout
+            </button>
+          )}
         </div>
       )}
     </nav>

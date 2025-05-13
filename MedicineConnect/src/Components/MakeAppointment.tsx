@@ -1,4 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import Swal from "sweetalert2"; // Make sure you imported this at the top
 
 const Appointment: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -11,6 +13,29 @@ const Appointment: React.FC = () => {
     message: "",
   });
 
+  const [doctors, setDoctors] = useState([]); // Available doctors list
+
+  // Fetch doctors whenever the department changes
+  useEffect(() => {
+    const fetchDoctors = async () => {
+      if (!formData.department) {
+        setDoctors([]);
+        return;
+      }
+      try {
+        const response = await axios.get(
+          `http://localhost:5000/api/doctors?department=${formData.department}`
+        );
+        setDoctors(response.data);
+      } catch (error) {
+        console.error("Error fetching doctors:", error);
+        setDoctors([]); // Reset doctors on error
+      }
+    };
+
+    fetchDoctors();
+  }, [formData.department]);
+
   const handleChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
@@ -19,10 +44,109 @@ const Appointment: React.FC = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const swalWithBootstrapButtons = Swal.mixin({
+    customClass: {
+      confirmButton: "btn btn-success",
+      cancelButton: "btn btn-danger",
+    },
+    buttonsStyling: false,
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Booking submitted:", formData);
-    alert("Appointment booked successfully!");
+
+    // Frontend Validation
+    const nameRegex = /^[a-zA-Z\s]+$/;
+    const phoneRegex = /^03\d{2}\d{7}$/;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const today = new Date();
+    const selectedDate = new Date(formData.date);
+
+    if (!nameRegex.test(formData.fullName)) {
+      Swal.fire(
+        "Invalid Name",
+        "Name should contain only letters and spaces.",
+        "error"
+      );
+      return;
+    }
+
+    if (!emailRegex.test(formData.email)) {
+      Swal.fire(
+        "Invalid Email",
+        "Please enter a valid email address.",
+        "error"
+      );
+      return;
+    }
+
+    if (!phoneRegex.test(formData.phone)) {
+      Swal.fire(
+        "Invalid Phone Number",
+        "Phone number must match format 03xx-xxxxxxx.",
+        "error"
+      );
+      return;
+    }
+
+    if (selectedDate <= today) {
+      Swal.fire(
+        "Invalid Date",
+        "Please select a future date for your appointment.",
+        "error"
+      );
+      return;
+    }
+
+    if (!formData.department) {
+      Swal.fire("Department Required", "Please select a department.", "error");
+      return;
+    }
+
+    if (!formData.doctor) {
+      Swal.fire("Doctor Required", "Please select a doctor.", "error");
+      return;
+    }
+
+    // Passed all validations, proceed to submit
+    try {
+      await axios.post("http://localhost:5000/api/appointments", {
+        fullName: formData.fullName,
+        email: formData.email,
+        phoneNumber: formData.phone,
+        preferredDate: formData.date,
+        department: formData.department,
+        doctor: formData.doctor,
+        message: formData.message,
+      });
+
+      swalWithBootstrapButtons.fire({
+        title: "Appointment Booked!",
+        text: "Your appointment has been successfully scheduled.",
+        icon: "success",
+        confirmButtonText: "OK",
+      });
+
+      // Reset the form
+      setFormData({
+        fullName: "",
+        email: "",
+        phone: "",
+        date: "",
+        department: "",
+        doctor: "",
+        message: "",
+      });
+      setDoctors([]);
+    } catch (error) {
+      console.error("Error booking appointment:", error);
+      swalWithBootstrapButtons.fire({
+        title: "Booking Failed",
+        text: "There was an error booking your appointment. Please try again.",
+        icon: "error",
+        confirmButtonText: "OK",
+      });
+    }
   };
 
   return (
@@ -42,6 +166,7 @@ const Appointment: React.FC = () => {
           className="bg-blue-50 p-8 rounded-2xl shadow-lg space-y-8"
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Full Name */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Full Name
@@ -57,6 +182,7 @@ const Appointment: React.FC = () => {
               />
             </div>
 
+            {/* Email */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Email
@@ -72,6 +198,7 @@ const Appointment: React.FC = () => {
               />
             </div>
 
+            {/* Phone */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Phone
@@ -87,6 +214,7 @@ const Appointment: React.FC = () => {
               />
             </div>
 
+            {/* Date */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Preferred Date
@@ -101,6 +229,7 @@ const Appointment: React.FC = () => {
               />
             </div>
 
+            {/* Department */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Department
@@ -121,6 +250,7 @@ const Appointment: React.FC = () => {
               </select>
             </div>
 
+            {/* Doctor */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Doctor
@@ -133,15 +263,16 @@ const Appointment: React.FC = () => {
                 className="p-3 w-full rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-400 outline-none"
               >
                 <option value="">Select Doctor</option>
-                <option value="Dr. Ayesha Khan">Dr. Ayesha Khan</option>
-                <option value="Dr. Ahmed Raza">Dr. Ahmed Raza</option>
-                <option value="Dr. Fatima Noor">Dr. Fatima Noor</option>
-                <option value="Dr. Zain Ali">Dr. Zain Ali</option>
-                <option value="Dr. Maria Hussain">Dr. Maria Hussain</option>
+                {doctors.map((doc: any) => (
+                  <option key={doc._id} value={doc.fullName}>
+                    {doc.fullName}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
 
+          {/* Message */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Message (Optional)
@@ -156,6 +287,7 @@ const Appointment: React.FC = () => {
             ></textarea>
           </div>
 
+          {/* Submit */}
           <div className="text-center pt-4">
             <button
               type="submit"
