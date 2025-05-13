@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import Swal from "sweetalert2"; // Make sure you imported this at the top
+import Swal from "sweetalert2";
 
 const Appointment: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -13,9 +13,17 @@ const Appointment: React.FC = () => {
     message: "",
   });
 
-  const [doctors, setDoctors] = useState([]); // Available doctors list
+  const [errors, setErrors] = useState({
+    fullName: "",
+    email: "",
+    phone: "",
+    date: "",
+    department: "",
+    doctor: "",
+  });
 
-  // Fetch doctors whenever the department changes
+  const [doctors, setDoctors] = useState([]);
+
   useEffect(() => {
     const fetchDoctors = async () => {
       if (!formData.department) {
@@ -29,19 +37,59 @@ const Appointment: React.FC = () => {
         setDoctors(response.data);
       } catch (error) {
         console.error("Error fetching doctors:", error);
-        setDoctors([]); // Reset doctors on error
+        setDoctors([]);
       }
     };
 
     fetchDoctors();
   }, [formData.department]);
 
+  const validateField = (name: string, value: string) => {
+    let error = "";
+
+    const nameRegex = /^[a-zA-Z\s]+$/;
+    const phoneRegex = /^03\d{2}\d{7}$/;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const today = new Date();
+    const selectedDate = new Date(value);
+
+    switch (name) {
+      case "fullName":
+        if (!nameRegex.test(value))
+          error = "Name should contain only letters and spaces.";
+        break;
+      case "email":
+        if (!emailRegex.test(value)) error = "Enter a valid email address.";
+        break;
+      case "phone":
+        if (!phoneRegex.test(value))
+          error = "Phone must match format 03xx-xxxxxxx.";
+        break;
+      case "date":
+        if (!value || selectedDate <= today)
+          error = "Please select a future date.";
+        break;
+      case "department":
+        if (!value) error = "Department is required.";
+        break;
+      case "doctor":
+        if (!value) error = "Doctor is required.";
+        break;
+      default:
+        break;
+    }
+
+    setErrors((prev) => ({ ...prev, [name]: error }));
+  };
+
   const handleChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
     >
   ) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+    validateField(name, value);
   };
 
   const swalWithBootstrapButtons = Swal.mixin({
@@ -55,60 +103,14 @@ const Appointment: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Frontend Validation
-    const nameRegex = /^[a-zA-Z\s]+$/;
-    const phoneRegex = /^03\d{2}\d{7}$/;
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const today = new Date();
-    const selectedDate = new Date(formData.date);
+    // Validate all fields before submitting
+    Object.entries(formData).forEach(([key, value]) => {
+      if (key in errors) validateField(key, value);
+    });
 
-    if (!nameRegex.test(formData.fullName)) {
-      Swal.fire(
-        "Invalid Name",
-        "Name should contain only letters and spaces.",
-        "error"
-      );
-      return;
-    }
+    const hasErrors = Object.values(errors).some((err) => err !== "");
+    if (hasErrors) return;
 
-    if (!emailRegex.test(formData.email)) {
-      Swal.fire(
-        "Invalid Email",
-        "Please enter a valid email address.",
-        "error"
-      );
-      return;
-    }
-
-    if (!phoneRegex.test(formData.phone)) {
-      Swal.fire(
-        "Invalid Phone Number",
-        "Phone number must match format 03xx-xxxxxxx.",
-        "error"
-      );
-      return;
-    }
-
-    if (selectedDate <= today) {
-      Swal.fire(
-        "Invalid Date",
-        "Please select a future date for your appointment.",
-        "error"
-      );
-      return;
-    }
-
-    if (!formData.department) {
-      Swal.fire("Department Required", "Please select a department.", "error");
-      return;
-    }
-
-    if (!formData.doctor) {
-      Swal.fire("Doctor Required", "Please select a doctor.", "error");
-      return;
-    }
-
-    // Passed all validations, proceed to submit
     try {
       await axios.post("http://localhost:5000/api/appointments", {
         fullName: formData.fullName,
@@ -127,7 +129,6 @@ const Appointment: React.FC = () => {
         confirmButtonText: "OK",
       });
 
-      // Reset the form
       setFormData({
         fullName: "",
         email: "",
@@ -138,6 +139,14 @@ const Appointment: React.FC = () => {
         message: "",
       });
       setDoctors([]);
+      setErrors({
+        fullName: "",
+        email: "",
+        phone: "",
+        date: "",
+        department: "",
+        doctor: "",
+      });
     } catch (error) {
       console.error("Error booking appointment:", error);
       swalWithBootstrapButtons.fire({
@@ -174,12 +183,16 @@ const Appointment: React.FC = () => {
               <input
                 type="text"
                 name="fullName"
-                required
                 value={formData.fullName}
                 onChange={handleChange}
-                className="p-3 w-full rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-400 outline-none"
+                className={`p-3 w-full rounded-lg border ${
+                  errors.fullName ? "border-red-500" : "border-gray-300"
+                } focus:ring-2 focus:ring-blue-400 outline-none`}
                 placeholder="John Doe"
               />
+              {errors.fullName && (
+                <p className="text-red-500 text-sm mt-1">{errors.fullName}</p>
+              )}
             </div>
 
             {/* Email */}
@@ -190,12 +203,16 @@ const Appointment: React.FC = () => {
               <input
                 type="email"
                 name="email"
-                required
                 value={formData.email}
                 onChange={handleChange}
-                className="p-3 w-full rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-400 outline-none"
+                className={`p-3 w-full rounded-lg border ${
+                  errors.email ? "border-red-500" : "border-gray-300"
+                } focus:ring-2 focus:ring-blue-400 outline-none`}
                 placeholder="john@example.com"
               />
+              {errors.email && (
+                <p className="text-red-500 text-sm mt-1">{errors.email}</p>
+              )}
             </div>
 
             {/* Phone */}
@@ -206,12 +223,16 @@ const Appointment: React.FC = () => {
               <input
                 type="tel"
                 name="phone"
-                required
                 value={formData.phone}
                 onChange={handleChange}
-                className="p-3 w-full rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-400 outline-none"
+                className={`p-3 w-full rounded-lg border ${
+                  errors.phone ? "border-red-500" : "border-gray-300"
+                } focus:ring-2 focus:ring-blue-400 outline-none`}
                 placeholder="03xx-xxxxxxx"
               />
+              {errors.phone && (
+                <p className="text-red-500 text-sm mt-1">{errors.phone}</p>
+              )}
             </div>
 
             {/* Date */}
@@ -222,11 +243,15 @@ const Appointment: React.FC = () => {
               <input
                 type="date"
                 name="date"
-                required
                 value={formData.date}
                 onChange={handleChange}
-                className="p-3 w-full rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-400 outline-none"
+                className={`p-3 w-full rounded-lg border ${
+                  errors.date ? "border-red-500" : "border-gray-300"
+                } focus:ring-2 focus:ring-blue-400 outline-none`}
               />
+              {errors.date && (
+                <p className="text-red-500 text-sm mt-1">{errors.date}</p>
+              )}
             </div>
 
             {/* Department */}
@@ -236,10 +261,11 @@ const Appointment: React.FC = () => {
               </label>
               <select
                 name="department"
-                required
                 value={formData.department}
                 onChange={handleChange}
-                className="p-3 w-full rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-400 outline-none"
+                className={`p-3 w-full rounded-lg border ${
+                  errors.department ? "border-red-500" : "border-gray-300"
+                } focus:ring-2 focus:ring-blue-400 outline-none`}
               >
                 <option value="">Select Department</option>
                 <option value="Cardiology">Cardiology</option>
@@ -248,6 +274,9 @@ const Appointment: React.FC = () => {
                 <option value="Dermatology">Dermatology</option>
                 <option value="Gynecology">Gynecology</option>
               </select>
+              {errors.department && (
+                <p className="text-red-500 text-sm mt-1">{errors.department}</p>
+              )}
             </div>
 
             {/* Doctor */}
@@ -257,10 +286,11 @@ const Appointment: React.FC = () => {
               </label>
               <select
                 name="doctor"
-                required
                 value={formData.doctor}
                 onChange={handleChange}
-                className="p-3 w-full rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-400 outline-none"
+                className={`p-3 w-full rounded-lg border ${
+                  errors.doctor ? "border-red-500" : "border-gray-300"
+                } focus:ring-2 focus:ring-blue-400 outline-none`}
               >
                 <option value="">Select Doctor</option>
                 {doctors.map((doc: any) => (
@@ -269,6 +299,9 @@ const Appointment: React.FC = () => {
                   </option>
                 ))}
               </select>
+              {errors.doctor && (
+                <p className="text-red-500 text-sm mt-1">{errors.doctor}</p>
+              )}
             </div>
           </div>
 
