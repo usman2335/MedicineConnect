@@ -7,7 +7,6 @@ const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret";
 // Register User
 const registerUser = async (req, res) => {
   const { firstName, lastName, email, password, role } = req.body;
-
   try {
     const existingUser = await User.findOne({ email });
     if (existingUser)
@@ -30,8 +29,9 @@ const registerUser = async (req, res) => {
     });
 
     res.status(201).json({ user, token });
-  } catch (err) {
-    res.status(500).json({ message: "Server error", error: err.message });
+  } catch (error) {
+    console.error(error); // 👈 helpful debug info
+    res.status(500).json({ message: "Signup failed", error: error.message });
   }
 };
 
