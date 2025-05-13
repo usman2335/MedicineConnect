@@ -1,3 +1,7 @@
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import Swal from "sweetalert2";
 import { Avatar, Divider, Layout } from "antd";
 import {
   CalendarOutlined,
@@ -6,37 +10,17 @@ import {
   UserOutlined,
   LogoutOutlined,
 } from "@ant-design/icons";
+
 import "../../index.css";
 import "./AdminDashboard.css";
 import DataDisplayCard from "../../Components/DataDisplayCard";
-import { useState } from "react";
 import TodayAppointmentsCard from "../../Components/TodayAppointmentsCard";
 import WeeklyAppointmentsCard from "../../Components/WeeklyAppointmentsCard";
 import Appointment from "../../Components/Appointment";
-import Patient from "../../Components/Patient";
 import Doctor from "../../Components/Doctor";
+import Patient from "../../Components/Patient";
 
-const { Header, Sider, Content } = Layout;
-
-const headerStyle: React.CSSProperties = {
-  textAlign: "center",
-  color: "#1f1f1f", // Dark text
-  backgroundColor: "#ffffff", // White navbar background
-  height: 64,
-  paddingInline: 48,
-  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)", // Subtle bottom shadow
-};
-
-const contentStyle: React.CSSProperties = {
-  lineHeight: "120px",
-  color: "#fff",
-  backgroundColor: "#f0f0f0",
-};
-
-const siderStyle: React.CSSProperties = {
-  color: "#fff",
-  backgroundColor: "#fefefe",
-};
+const { Sider, Content } = Layout;
 
 const layoutStyle = {
   fontFamily: "Poppins",
@@ -47,6 +31,11 @@ const layoutStyle = {
 
 const AdminDashboard = () => {
   const [view, setView] = useState<string>("dashboard");
+  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const navigate = useNavigate();
+
+  const adminName = localStorage.getItem("adminName") || "Admin";
 
   const menuItemClasses = (item: string) =>
     `flex items-center gap-3 cursor-pointer pl-5 py-2 rounded-md ${
@@ -55,11 +44,65 @@ const AdminDashboard = () => {
         : "hover:bg-gray-100 text-gray-900"
     }`;
 
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const { data } = await axios.get(
+          "http://localhost:5000/api/dashboard",
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
+        setDashboardData(data);
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
+  const handleLogout = async () => {
+    const result = await Swal.fire({
+      title: "Are you sure?",
+      text: "You will be logged out!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Yes, Logout!",
+      cancelButtonText: "Cancel",
+    });
+
+    if (result.isConfirmed) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("adminName");
+      navigate("/login");
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen text-lg">
+        Loading...
+      </div>
+    );
+  }
+
   return (
     <Layout style={layoutStyle}>
-      <Sider width="15%" style={siderStyle}>
+      <Sider width="15%" style={{ backgroundColor: "#fefefe" }}>
         <Divider />
-        <div className="flex flex-col gap-1 leading-15 mt-8 text-sm font-medium">
+        <div className="flex flex-col items-center mt-8">
+          <Avatar size={64} icon={<UserOutlined />} />
+          <h3 className="mt-2 text-md font-semibold text-gray-700">
+            {adminName}
+          </h3>
+        </div>
+        <Divider />
+        <div className="flex flex-col gap-1 leading-15 text-sm font-medium">
           <div
             className={menuItemClasses("dashboard")}
             onClick={() => setView("dashboard")}
@@ -88,8 +131,10 @@ const AdminDashboard = () => {
             <UserOutlined style={{ fontSize: "1.5rem" }} />
             <span>Patients</span>
           </div>
-
-          <div className="flex items-center gap-3 cursor-pointer hover:bg-gray-100 pl-5 py-1.5 rounded-md mt-20 text-gray-900">
+          <div
+            className="flex items-center gap-3 cursor-pointer hover:bg-gray-100 pl-5 py-2 rounded-md mt-20 text-gray-900"
+            onClick={handleLogout}
+          >
             <LogoutOutlined style={{ fontSize: "2rem" }} />
             <span>Logout</span>
           </div>
@@ -97,20 +142,22 @@ const AdminDashboard = () => {
       </Sider>
 
       <Layout>
-        {/* <Header style={headerStyle}>
-          <div className="flex items-center justify-end gap-1">
-            <Avatar icon={<UserOutlined />} />
-            <span>Admin Placeholder</span>
-          </div>
-        </Header> */}
-
-        <Content style={contentStyle}>
+        <Content style={{ padding: "20px", backgroundColor: "#f0f0f0" }}>
           {view === "dashboard" ? (
             <>
               <div className="flex gap-4 justify-between mt-5 px-10">
-                <DataDisplayCard title="Total Patients" content="100" />
-                <DataDisplayCard title="Total Doctors" content="100" />
-                <DataDisplayCard title="Total Appointments" content="100" />
+                <DataDisplayCard
+                  title="Total Patients"
+                  content={dashboardData?.totalPatients ?? "Loading..."}
+                />
+                <DataDisplayCard
+                  title="Total Doctors"
+                  content={dashboardData?.totalDoctors ?? "Loading..."}
+                />
+                <DataDisplayCard
+                  title="Total Appointments"
+                  content={dashboardData?.totalAppointments ?? "Loading..."}
+                />
               </div>
               <div className="flex justify-between mt-5 px-10">
                 <TodayAppointmentsCard
@@ -124,17 +171,11 @@ const AdminDashboard = () => {
               </div>
             </>
           ) : view === "appointments" ? (
-            <div className="text-2xl">
-              <Appointment />
-            </div>
+            <Appointment />
           ) : view === "doctors" ? (
-            <div className="text-2xl">
-              <Doctor />
-            </div>
+            <Doctor />
           ) : view === "patients" ? (
-            <div className="text-2xl">
-              <Patient />
-            </div>
+            <Patient />
           ) : (
             <div className="text-center text-2xl">Welcome!</div>
           )}
