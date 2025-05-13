@@ -7,10 +7,6 @@ const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret";
 // Register User
 const registerUser = async (req, res) => {
   const { firstName, lastName, email, password, role } = req.body;
-<<<<<<< HEAD
-=======
-
->>>>>>> 8afc56451cb4cdb64becdebec87825803625c16d
   try {
     const existingUser = await User.findOne({ email });
     if (existingUser)
@@ -58,12 +54,6 @@ const loginUser = async (req, res) => {
       expiresIn: "1d",
     });
 
-<<<<<<< HEAD
-    res.status(200).json({ user, token });
-  } catch (error) {
-    console.error(error); // 👈 helpful debug info
-    res.status(500).json({ message: "Signup failed", error: error.message });
-=======
     // Respond with token, patient name, and role
     res.status(200).json({
       token,
@@ -74,7 +64,6 @@ const loginUser = async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ message: "Server error", error: err.message });
->>>>>>> 8afc56451cb4cdb64becdebec87825803625c16d
   }
 };
 
